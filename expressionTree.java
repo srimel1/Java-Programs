@@ -1,353 +1,232 @@
-/*Author Ryan Henao expressionTree.java
- * Date 12/2/2013
- * Hw #6 Bhola CSC 3410  MW 1:30-2:45
- * 1.The purpose of this program is to write a calculator that takes an expression and gives an answer.
- * It can also take in variables and use those to evaluate the expression. It checks for errors in the expression
- * and creates an expression tree as well.
- * 2. The solution to the problem is to take the infix expression and convert it to postfix.
- * This is done using an operator stack. The postfix expression is then parsed into an expression tree 
- * and is also sent into the calculator. The calculator uses an operand stack to evaluate the input
- * and create an output. The tree should also hold the expression as well. 
- * 3.The data structures used in this program are- arrays, linked lists, stacks, and binary trees.
- * Arrays are used to hold the expression. The stacks are used to perform conversions. 
- * The binary tree is used to hold the expression in tree parse format.
- * 4. The input to this program is an expression that should be valid but it does offer basic error checking.
- * The expression must use valid characters as well. The other input is a variable.
- * The output is the evaluation of the expression including variables. This will be an integer number
- * 5.there are five Classes. expression Tree is the main and it is the driver class. 
- * It also provides error checking. TreeParse builds the tree given the expression.
- * postFix converts the expression to postFix. And calculator evaluates the expression.
- * Node is used to store the node info
- */
-
+/*<h1> Assignment 6: expressionTree </h1>
+ * Compilation: javac expressionTree.java
+ * Execution: java -jar expressionTree.jar
+ * Documentation: javadoc expressionTree.java
+ * -- This source code is fully javadoc compliant
+ * Purpose of Program:
+ * -- The purpose of the program <tt> expressionTree </tt> is to parse and evaluate
+ *    mathematical expressions. It should handle operator precedence and associativity
+ *    correctly. It should also handle parse errors gracefully.
+ * Solution:
+ * -- 1: Generate the token list.
+ *    2: Create an empty stack for keeping operators. Create an empty list for output.
+ *    3: Scan the token list from left to right.
+ *    4: If the token is an operand, append it to the end of the output list.
+ *       If the token is a left parenthesis, push it on the stack.
+ *       If the token is a right parenthesis, pop the stack until the corresponding left parenthesis is removed.
+ *         Append each operator to the end of the output list.
+ *       If the token is an operator push it on the stack.
+ *         However, first remove any operators already on the opstack that have higher or equal precedence
+ *         and append them to the output list.
+ *    5: When the input expression has been completely processed, check the stack.
+ *         Any operators still on the stack can be removed and appended to the end of the output list.
+ * Data Strutures: Stacks and Binary Trees
+ * Description of Use:
+ * -- Follow Execution above
+ * Expected I/O: See reference <a href="http://grid.cs.gsu.edu/jbhola/CSc_2720/Fall16/assign6_expre_tree.html"> here </a>
+ * Explaination of Classes:
+ * -- See above each class
+ * -- The <tt> expressionTree </tt> class is the main entry point for the program and contains the main
+ *    exection loop.
+ * <strong> Important </strong>
+ * -- Assume every parameter has an implicit non null pre-condition
+ *    Assume every return value has an implicit non null post-condition
+ **/
+import java.util.ArrayList;
 import java.util.Stack;
 import java.util.Scanner;
+import java.util.InputMismatchException;
 public class expressionTree {
-		
-	public static Stack<Object> operatorStack = new Stack<Object>();
-		
-	public static Stack<Object> operandStack = new Stack<Object>();
-		
-	public static Stack<Object> treeStack = new Stack<Object>();
-	
-	public static Stack<Object> parenStack = new Stack<Object>();
-	
-	public static void main(String args[]){
-		
-		String[] expression;
-		
-		Scanner input = new Scanner(System.in); //get user input
-		
-		System.out.print("Enter an expression:  ");
-		String answer = input.nextLine().replaceAll("\\s+",""); //remove all spaces
-		
-		if(errorCheck(answer)) //check for errors
-			System.exit(0);
-		
-		expression = postFix.convertPost(answer);  //convert to postfix then send to parseLine
-		
-		System.out.print("Converted expression: ");
-		for(String string: expression)
-			System.out.print(string);
-		
-		TreeParse.parseLine(answer); //creates an expression tree
-		
-		System.out.println(); //new line
-		
-		while(true){
-			System.out.println("Enter an x value: ");
-			String x = input.nextLine();
-				if(x.equals("q")){
-					break;
-				}
-				
-			int y = Integer.parseInt(x);
-			Calculator.calculate(expression,y);
-		}
-		
-		
-		input.close();
-	}
-	
-	//takes a string that should be an expression and stops program if error found
-	public static boolean errorCheck(String answer){
-		if(answer.indexOf(".") != -1){
-			System.out.println("Error cannot accept floating points");
-			return true;
-		}else if(!TreeParse.checkOperand(answer.substring(answer.length()-1)) && !answer.substring(answer.length()-1).equals(")") ){
-			System.out.println("Error, need operand as last Token");
-			return true;
-		}
-		//check for error on parentheses
-		for(int i =0;i<answer.length();i++){
-			String curr = answer.substring(i,i+1);
-			if(curr.equals("(")){
-				parenStack.push(curr);
-			}else if(curr.equals(")") && (parenStack.empty() || parenStack.peek().equals(")")) ){
-				parenStack.push(curr);
-			}else if(curr.equals(")") && parenStack.peek().equals("(")){
-				parenStack.pop();
-			}
-		}
-		if(!parenStack.empty()){
-			System.out.println("Error parentheses do not match");
-			return true;
-		}
-		return false;		
-	}
-	//returns true or false. Program terminates on false
-	
+    /**
+     * The <tt> ParseException </tt> class should be thrown whenever the parser cannot
+     * parse the expression or convert the expression to postfix.
+     **/
+    public static class ParseException extends Exception {
+        public ParseException(String message) { super(message); }
+    }
+    public static ArrayList<Token> lex(String str) throws ParseException {
+        ArrayList<Token> tokens = new ArrayList<>();
+        int i = 0;
+        while (i < str.length()) {
+            char c = str.charAt(i);
+            switch (c) {
+                case ' ':
+                    break;
+                case '(':
+                    tokens.add(new Token(TokenKind.LeftParen));
+                    break;
+                case ')':
+                    tokens.add(new Token(TokenKind.RightParen));
+                    break;
+                case '*':
+                    tokens.add(new Token(TokenKind.Mul));
+                    break;
+                case '/':
+                    tokens.add(new Token(TokenKind.Div));
+                    break;
+                case '%':
+                    tokens.add(new Token(TokenKind.Mod));
+                    break;
+                case '-':
+                    tokens.add(new Token(TokenKind.Sub));
+                    break;
+                case '+':
+                    tokens.add(new Token(TokenKind.Add));
+                    break;
+                case 'x':
+                    tokens.add(new Token(TokenKind.Var));
+                    break;
+                case '0': case '1': case '2':
+                case '3': case '4': case '5':
+                case '6': case '7': case '8':
+                case '9':
+                    Scanner num = new Scanner(str.substring(i,str.length())).useDelimiter("\\D");
+                    long l = num.nextLong();
+                    tokens.add(new Token(TokenKind.Number,l));
+                    i += (int)(Math.log10(l) + 1);
+                    continue;
+                case '.':
+                    throw new ParseException("Cannot accept floating point numbers.");
+                default:
+                    throw new ParseException("Invalid char: " + c);
+            }
+            i++;
+        }
+        return tokens;
+    }
+    public static <E> void merge(Stack<BinaryTree<E>> tokens, E operator) throws ParseException {
+        String err = "Missing operand.";
+        if (tokens.empty()) throw new ParseException(err);
+        BinaryTree<E> right = tokens.pop();
+        if (tokens.empty()) throw new ParseException(err);
+        BinaryTree<E> left  = tokens.pop();
+        tokens.push(new BinaryTree<>(operator, left, right));
+    }
+    public static BinaryTree<Token> parse(ArrayList<Token> tokens) throws ParseException {
+        Stack<BinaryTree<Token>> output = new Stack<BinaryTree<Token>>();
+        Stack<Token> operators = new Stack<>();
+        int balParens = 0;
+        Token lastToken = null;
+        for (Token current: tokens) {
+            switch (current.getTokenKind()) {
+                case Var: case Number:
+                    if (lastToken != null && lastToken.wasOperand()) {
+                        throw new ParseException("No operator between operands.");
+                    }
+                    output.push(new BinaryTree<>(current));
+                    break;
+                case LeftParen:
+                    if (lastToken != null && !lastToken.wasOperator()) {
+                        throw new ParseException("No operator between operand and left parentheses.");
+                    }
+                    operators.push(current);
+                    balParens++;
+                    break;
+                case RightParen:
+                    while (true) {
+                        System.out.println("RightParen");
+                        if (operators.empty()) {
+                            throw new ParseException("No matching left parentheses for a right parentheses.");
+                        }
+                        Token t = operators.pop();
+                        if (t.typeIs(TokenKind.LeftParen)) break;
+                        merge(output,t);
+                    }
+                    balParens--;
+                    break;
+                case Mul: case Div: case Mod:
+                case Sub: case Add:
+                    if (lastToken != null && lastToken.wasOperator()) {
+                        String err = "The " + current + " operator cannot be preceded by a " + lastToken + " operator.";
+                        throw new ParseException(err);
+                    }
+                    while (!operators.empty() &&
+                           current.precedence() <= operators.peek().precedence()) {
+                        merge(output,operators.pop());
+                    }
+                    operators.push(current);
+                    break;
+            }
+            lastToken = current;
+        }
+        if (0 < balParens) throw new ParseException("No matching right parentheses for a left parentheses.");
+        while (!operators.empty()) {
+            merge(output,operators.pop());
+        }
+        return output.pop();
+    }
+    /**
+     * @pre The tokens list is a valid postfix expression
+     **/
+    public static Long evaluate(ArrayList<Token> tokens, Long environment) {
+        Stack<Long> operands = new Stack<>();
+        for (Token current: tokens) {
+            TokenKind tk = current.getTokenKind();
+            switch (tk) {
+                case Var:
+                    operands.push(environment);
+                    break;
+                case Number:
+                    operands.push(current.getNumber());
+                    break;
+                default:
+                    Long op1 = operands.pop();
+                    Long op2 = operands.pop();
+                    switch (tk) {
+                        case Mul:
+                            operands.push(op2 * op1);
+                            break;
+                        case Div:
+                            operands.push(op2 / op1);
+                            break;
+                        case Mod:
+                            operands.push(op2 % op1);
+                            break;
+                        case Sub:
+                            operands.push(op2 - op1);
+                            break;
+                        case Add:
+                            operands.push(op2 + op1);
+                            break;
+                    }
+            }
+        }
+        return operands.pop();
+    }
+    public static void main(String[] args) {
+        boolean notFoundValid = true;
+        ArrayList<Token> tokens = new ArrayList<>();
+        Scanner s = new Scanner(System.in);
+        while (notFoundValid) {
+            System.out.print("Enter infix expression: ");
+            String expr = s.nextLine();
+            try {
+                parse(lex(expr)).postOrder(tokens);
+                String out = "";
+                for (Token t: tokens) {
+                    out += t + " ";
+                }
+                System.out.println("Converted expression: " + out);
+                notFoundValid = false;
+            } catch (ParseException pe) {
+                System.out.println("Error in expression!! " + pe.getMessage());
+            }
+        }
+        boolean running = true;
+        while (running) {
+            try {
+                System.out.print("Enter value of x: ");
+                Long environment = s.nextLong();
+                System.out.println("Answer to expression: " + evaluate(tokens,environment));
+            } catch (InputMismatchException e) {
+                String quit = s.nextLine();
+                if (0 < quit.length() && quit.charAt(0) == 'q') {
+                    running = false;
+                } else {
+                    System.out.println("Please either enter an integer or 'q' to quit.");
+                }
+            }
+        }
+
+    }
 }
- class postFix {
-	//takes a string and returns it in postfix array format
-	public static String[] convertPost(String string) {
-		int index = 0;
-		String[] result = new String[string.length()+20];
-		for(int x = 0;x<result.length;x++){
-			result[x]="";
-		}
-		//assuming input string is already error checked and has had spaces removed
-		for(int i = 0;i<string.length();i++){
-			String currentChar = string.substring(i,i+1);
-			String topOfStack = "";
-			
-			if(!expressionTree.operatorStack.empty()){
-				topOfStack  = (String) expressionTree.operatorStack.peek();
-			}
-			
-			if(TreeParse.checkOperand(currentChar)){
-				result[index]+=currentChar;
-				//result+=currentChar;
-			}else{
-				index++;
-				if(expressionTree.operatorStack.empty()){
-					expressionTree.operatorStack.push(currentChar);
-				}else if(precedenceCheck(currentChar, topOfStack)){
-					expressionTree.operatorStack.push(currentChar);
-				}else{
-					while(!expressionTree.operatorStack.empty() && !precedenceCheck(currentChar, topOfStack) && !topOfStack.equals("(")){
-						result[index]+=topOfStack;
-						expressionTree.operatorStack.pop();
-						if(!expressionTree.operatorStack.empty())
-							topOfStack = (String) expressionTree.operatorStack.peek();
-					}
-					
-					if(currentChar.equals(")"))
-						expressionTree.operatorStack.pop();
-					else
-						expressionTree.operatorStack.push(currentChar);
-				}
-				index++;
-			}
-			
-		}
-		if(!result[index].equals(null))
-			index++;
-		while(!expressionTree.operatorStack.empty()){
-			result[index]+=expressionTree.operatorStack.peek();
-			//result+=expressionTree.operatorStack.peek();
-			expressionTree.operatorStack.pop();
-			index++;
-		}
-		return result;
-	}
-	//result is now an array with each element representing one char or number
-	//also is in postfix
-	
-	// returns true if currentChar is higher on precedence than topOfStack
-	public static boolean precedenceCheck(String currentChar, String topOfStack){
-		int curChar = 0;
-		int stackChar = 0;
-		
-		//give precedence and compare
-		switch(currentChar){
-		case "(": curChar = 4;
-			break;
-		case "_": curChar = 3;
-			break;
-		case "&": curChar = 3;
-			break;
-		case "*": curChar = 2;
-			break;
-		case "/": curChar = 2;
-			break;
-		case "%": curChar = 2;
-			break;
-		case "+": curChar = 1;
-			break;
-		case "-": curChar = 1;
-			break;
-		}
-		
-		switch(topOfStack){
-		case "_": stackChar = 3;
-			break;
-		case "&": stackChar = 3;
-			break;
-		case "*": stackChar = 2;
-			break;
-		case "/": stackChar = 2;
-			break;
-		case "%": stackChar = 2;
-			break;
-		case "+": stackChar = 1;
-			break;
-		case "-": stackChar = 1;
-			break;
-		case "(": stackChar = 0;
-		break;
-	}
-		
-	if(curChar > stackChar)
-		return true;
-	return false;
-	}
-}
-  class Calculator {
-		
-		//takes an and variable array and calculates using stack
-		//variable must be given but it might not be used if not in expression
-		public static void calculate(String[] input,int x){
-			expressionTree.operandStack.removeAllElements();
-			
-			for(int i = 0;i<input.length;i++){
-				String currentChar = input[i];
-				if(currentChar.equals("") || currentChar == null){
-					continue;
-				}
-				if(TreeParse.checkOperand(currentChar)){
-					expressionTree.operandStack.push(currentChar);
-				}else{
-					checkOp(currentChar,x); //method that performs stack operations
-				}
-			}
-			System.out.println(expressionTree.operandStack.peek());
-		}
-		
-		//does an operation depending on the symbol
-		//takes the symbol and the possible variable x
-		//operates on top two stack elements unless unary
-		public static void checkOp(String currentChar,int x){
-			int opA;
-			int opB;
-			int c;
-			
-			if(currentChar.equals("+")){
-				try{
-					opA = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opA = x;
-				}
-				
-				expressionTree.operandStack.pop();
-				
-				try{
-					opB = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opB = x;
-				}
-				
-				expressionTree.operandStack.pop();
-				
-				c = opB+opA;
-				expressionTree.operandStack.push(c+"");
-			}else if(currentChar.equals("-")){
-				try{
-					opA = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opA = x;
-				}
-				
-				expressionTree.operandStack.pop();
-				
-				try{
-					opB = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opB = x;
-				}
-				expressionTree.operandStack.pop();
-				
-				c = opB-opA;
-				expressionTree.operandStack.push(c+"");
-			}else if(currentChar.equals("*")){
-				try{
-					opA = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opA = x;
-				}
-				
-				expressionTree.operandStack.pop();
-				
-				try{
-					opB = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opB = x;
-				}
-				expressionTree.operandStack.pop();
-				
-				c = opB*opA;
-				expressionTree.operandStack.push(c+"");
-			}else if(currentChar.equals("/")){
-				try{
-					opA = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opA = x;
-				}
-				
-				expressionTree.operandStack.pop();
-				
-				try{
-					opB = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opB = x;
-				}
-				expressionTree.operandStack.pop();
-				
-				c = opB/opA;
-				expressionTree.operandStack.push(c+"");
-			}else if(currentChar.equals("%")){
-				try{
-					opA = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opA = x;
-				}
-				
-				expressionTree.operandStack.pop();
-				
-				try{
-					opB = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opB = x;
-				}
-				expressionTree.operandStack.pop();
-				
-				c= opB%opA;
-				expressionTree.operandStack.push(c+"");
-			}else if(currentChar.equals("_")){
-				try{
-					opA = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opA = x;
-				}
-				
-				expressionTree.operandStack.pop();
-			
-				c = opA*-1;
-				expressionTree.operandStack.push(c+"");
-			}else{
-				try{
-					opA = Integer.parseInt((String) expressionTree.operandStack.peek());
-				}catch(Exception e){
-					opA = x;
-				}
-				
-				expressionTree.operandStack.pop();
-				
-				c = opA;
-				
-				expressionTree.operandStack.push(c+"");
-			}
-				
-		}
-		//top two elements have now been operated on
-	}

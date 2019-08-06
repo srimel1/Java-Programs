@@ -1,33 +1,51 @@
 import java.io.File;
-import java.util.Scanner;
+import java.io.FileReader;
+import java.util.*;
 
 public class ReadFile {
-	//takes a file string and returns an array with its contents
-	public static String[] readFile(String file){
-		Scanner fileInput;
-		String[] resultArray = new String[100]; //first array has size of 100 which should be larger enough to hold any file
-		
-		try{
-			fileInput = new Scanner(new File(file));
-			int count = 0;
-			while(fileInput.hasNext()){
-				String currentWord = fileInput.next().trim();
-				resultArray[count] = currentWord; //adds the current string to the array
-				count++;
-			}
-			fileInput.close();
-		}catch(Exception e){
-			System.out.println("file not found"); //catches any invalid files
+	private Scanner x;
+	
+	public void openFile() {
+		try {
+			x = new Scanner(new File("Ozymandias.txt"));
+			
 		}
-		int i;
-		for(i = 0;resultArray[i] != null;i++); //i is incremented until null value is hit to find the actual size of the array
-		
-		String[] newArray = new String[i];  //new array is made which will cut out all the null values that were not populated
-		
-		for(int j = 0;j<newArray.length;j++) //new array is populated with old array values excluding left over null values
-			newArray[j] = resultArray[j];
-		
-		return newArray;	
+		catch(Exception e) {
+			System.out.println("file not found.");
+		}
 	}
-	//returning new Array. it should either be empty or populated
-}
+	public void readFile() {
+		while(x.hasNext()) {
+			String a = x.next();
+			String c = x.next();
+			String b = x.next();
+//			String[] words = new String[10];
+//			for(int i = 0; i<words.length; i++) {
+//				words[i] = x.next();
+		}
+		}
+	public void closeFile() {
+		x.close();
+		
+	}
+	}
+
+//		HashMap<String, Integer> map  = new HashMap<String, Integer>();
+//		
+//		int total = 0;
+//		for(String w : fr.words()) {
+//			w=w.toLowerCase();
+//			total += 1;
+//			if(map.keySet().contains(w));
+//			map.put(w,  map.get(w)+1);
+//		}else{
+//			map.putAll(w,1);
+//		}
+//		}
+//	for(String w : map.keySte());{
+//		int occurences = map.get(w);
+//		if(occurences>500) {
+//			System.out.println(occurences +"\t"+w);
+//		}
+//	}
+

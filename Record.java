@@ -1,30 +1,43 @@
-public class Record {
-	
-	//all the fields used by one record
-	public String firstName;
-	public String lastName;
-	public String phoneNumber;
-	public Record nextRecord; //stores a link to the next record
-	
-	//initializes the record
-	public Record(String firstName,String lastName,String phoneNumber){
-		this.firstName = firstName;
-		this.lastName = lastName;
-		this.phoneNumber = phoneNumber;
-	}
-	
-	//copy constructor
-	//this is used instead of clone() method because of problems when trying to perform a deep clone
-	//other classes call this method to make clones for themselves
-	public Record(Record aRecord) {
-	    this(aRecord.firstName, aRecord.lastName,aRecord.phoneNumber);
-	}
-	//new reocord created that is now a clone of record given
-	
-	
-	//prints the first name last name and phone number in a nice format
-	public void printItems(){
-		System.out.println(this.firstName + "\t \t" + this.lastName + "\t \t" + this.phoneNumber);
-	}
-	
+import java.util.Scanner;
+public class Record implements Comparable<Record> {
+    public  String  firstname;
+    public  String  lastname;
+    public  String  phoneNumber;
+    private Scanner scanner;
+    public Record() { }
+    public Record(Scanner s) {
+        this.scanner = s;
+        this.updateFirstname();
+        this.updateLastname();
+        this.updatePhoneNumber();
+    }
+    public void setScanner(Scanner s) { this.scanner = s; }
+    @Override
+    public String toString() {
+        return this.firstname + " " + this.lastname + " " + this.phoneNumber;
+    }
+    public void updateFirstname() {
+        System.out.print("Enter first name: ");
+        this.firstname = this.scanner.next();
+    }
+    public void updateLastname() {
+        System.out.print("Enter last name: ");
+        this.lastname = this.scanner.next();
+    }
+    public void updatePhoneNumber() {
+        System.out.print("Enter phone number: ");
+        this.phoneNumber = this.scanner.next();
+    }
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other == null || this.getClass() != other.getClass()) return false;
+        Record rother = (Record) other;
+        return this.firstname.equals(rother.firstname) &&
+               this.lastname.equals(rother.lastname);
+    }
+    @Override
+    public int compareTo(Record other) {
+        return this.lastname.compareTo(other.lastname);
+    }
 }
