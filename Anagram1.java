@@ -19,7 +19,7 @@ public class Anagram1 {
         Scanner fileinput = null; 
         int i = 0;
         int wordcount = 0;
-        final String FILE_PATH = "//Users//keithwellman//Documents//Fall 2016//Data Structure//testfile/";
+        final String FILE_PATH = "//Fall 2016//Data Structure//testfile/";
         
         Scanner input = new Scanner(System.in);
         // prompt user for name of file and assign to inputFile
